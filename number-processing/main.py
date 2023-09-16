@@ -15,7 +15,7 @@ TO-DO:
     - Implement saving the JSON
     - Properly format the JSON
     - Implement save JSON function
-
+    - Fix calculations done in num_crunching. Not adding up everything right
 """
 
 import os, json
