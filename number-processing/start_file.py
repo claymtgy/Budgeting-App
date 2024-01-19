@@ -34,4 +34,4 @@ def init_envelopes(ENVELOPES):
         print(f"Your current envelopes are as follows: {ENVELOPES}")
         if add_another == "n" or add_another == "no":
             add_envelopes = False   
-        print("Finished adding envelopes") 
+            print("Finished adding envelopes") 
