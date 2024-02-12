@@ -5,17 +5,18 @@ If you're planning on making commits to this, please name global variables at th
 and functions below that.
 
 TO-DO:
-    - The Envelopes need to be a dict. The dictionary should be appended every time a new envelope
-            is created.
-    - Create global variable that sets initiating to true by default. Then changes that to false if all required files exist
     - If initiation = false, then run the else statements for stuff.
-    - Incomes should be kept in a dictionary
-    - Derive the total income from the incomes list
+    - Initialization needs a check
+    - envelope_totals is not returning a value, it's returning a dict. This needs to be changed
     - Implememt reading the JSONs
     - Implement saving the JSON
     - Properly format the JSON
-    - Implement save JSON function
-    - Fix calculations done in num_crunching. Not adding up everything right
+    - Create functionality to edit/delete individual envelopes
+
+Write Tests
+    - Test JSON saving
+    - Test INITIALIZATION is actually working
+    - Test JSON deleting
 """
 
 # i don't think the total from the envelopes is beign saved anywhere
@@ -40,30 +41,51 @@ HAS_GOTTEN_REMANING_TOTAL = False
 
 
 # Sets initialization to true or false,
-if os.path.isfile('../income.json') and os.path.isfile("../envelopes.json"):
-    print("Initialization skipped, moving on.") 
-    INITIALIZATION = False
-    with open('../income.json', 'r') as f1:
-        data_from_incomes = json.load(f1)
-        INCOMES_LIST = data_from_incomes
-        f1.close()
-    with open('../envelopes.json', 'r') as f2:
-        data_from_envelopes = json.load(f2)
-        ENVELOPES = data_from_envelopes
-        f2.close()
+def initialize():
+    if os.path.isfile('../income.json') and os.path.isfile("../envelopes.json"):
+        print("Initialization skipped, moving on.") 
+        INITIALIZATION = False
+        with open('../income.json', 'r') as f1:
+            data_from_incomes = json.load(f1)
+            INCOMES_LIST = data_from_incomes
+            f1.close()
+        with open('../envelopes.json', 'r') as f2:
+            data_from_envelopes = json.load(f2)
+            ENVELOPES = data_from_envelopes
+            f2.close()
+
 
 if INITIALIZATION:
     init_incomes(INCOMES_LIST)
     init_envelopes(ENVELOPES)
 
+# Sets the main loop
 while CONTINUE:
-    selection = input('Press 1 to get total income, 2 to get env total, or 3 to get envelope totals. 4 will get unallocated funds, 5 will save incomes. 6 will stop the program')
-        if selection = 1:
-            TOTAL_INCOME = get_total_incomes(INCOMES_LIST, TOTAL_INCOME)
-        elif selection = 2:
-            get_env_total(
+    selection = int(input('Press 1 to get total income, 2 to get envelope totals, or 3 to get remaining. 4 re-run initialization, 5 will save incomes. 6 will stop the program'))
+    if selection == 1:
+        print("Getting total income")
+        TOTAL_INCOME = get_total_incomes(INCOMES_LIST)
+    elif selection == 2:
+        print("Getting envelope total")
+        get_env_total(ENVELOPES)
+    elif selection == 3:
+        print("Getting remaining total")
+        get_remaining_total(ENVELOPES,TOTAL_INCOME)
+    elif selection == 4:
+        print("Re-running  initialization")
+        initialize()
+    elif selection == 5:
+        print("Saving income")
+        save_jsons(INCOMES_LIST, ENVELOPES)
+    elif selection == 6:
+        CONTINUE = False
+        print("Exiting")
+    else:
+        print("whoops, invalid choice")
 
-TOTAL_INCOME = get_total_incomes(INCOMES_LIST, TOTAL_INCOME)
+
+
+TOTAL_INCOME = get_total_incomes(INCOMES_LIST)
 
 # The get env totals is takign in incomes instead of envelopes
 #get_env_total(INCOMES_LIST)
@@ -75,7 +97,7 @@ envelope_totals = get_env_total(ENVELOPES)
 # Any math or equation being done here, or nested in a funciton in num_crunching needs to be its own function in num_crunching
 # right now I'm getting envelope totals too many times.
 #get_remaining_total(ENVELOPES, TOTAL_INCOME)
-
+'''
 print(f"Your total unallocated funds are: \n{get_remaining_total(ENVELOPES, TOTAL_INCOME)}")
 
 save_or_no = input("Would you like to save your incomes and envelopes? y/n\n")
@@ -84,3 +106,4 @@ if save_or_no == "y" or save_or_no == "yes":
     save_jsons(INCOMES_LIST, ENVELOPES)
 elif save_or_no == "delete":
     delete_jsons()
+'''
