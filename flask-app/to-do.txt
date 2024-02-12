@@ -1,0 +1,24 @@
+Set up logins
+Set up connection to SQLite until we are ready with a basic prod environment
+Dockerize everything
+Get .env stuff set up properly
+Get good templates set up
+Get good CSS package (Tailwind would be good)
+Get all logic moved in from ../number-crunching directory
+
+Get routes set up so we can make calls from a browser for CRUD functionality
+
+- Send in incomes
+- Send in envelopes
+- Edit existing incomes
+- Edit existing envelopes
+- Update client on remaining totals
+- Create expenses
+- Void expenses
+
+
+
+Define DB relationships
+
+
+Define Expense functionality

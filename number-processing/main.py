@@ -5,33 +5,66 @@ If you're planning on making commits to this, please name global variables at th
 and functions below that.
 
 TO-DO:
-    - If initiation = false, then run the else statements for stuff.
     - Initialization needs a check
     - envelope_totals is not returning a value, it's returning a dict. This needs to be changed
-    - Implememt reading the JSONs
-    - Implement saving the JSON
-    - Properly format the JSON
+    - Rename variables (remaining-total is currently for unallocated income funds, not accounted for by an envelope)
     - Create functionality to edit/delete individual envelopes
+    - Implement default path?
+        (may not be useful/practical when running on a web-server)
+    - Ensure everything is a functio that can be called to start
+    - Wrap the main loop in a function
+    - Restructure files for better organization
+    - Implement expenses
+        - Expenses need to be housed in a dictionary themselves.
+        - Any time a change is made to Expenses, there needs to be a call to calculate remaining total
+        - Expenses details to be in a nested dictionary
+        - Expenses need to be categorized from a categories list
+        - Expenses need to be able to be voided. 
+        - Expenses need to have a unique identifier
+        - Expenses need to have an amount tied to them as well.
+
+        ex:
+        expenses: {
+            1: [void: False, category: 4, name: 'expense-1', amount: -49, envelope: 1, transaction-id: 1]
+            2: [void: True, categorry: 1, name: 'expense-2', amount: 50, envelope: 0, transaction-id: 2]
+        }
+
+        The expenses are in a nested dictionary.
+
+        1 is the identifier, void is false, meaning run calculations on that particular category
+        2 is the identifier, void is true, so don't calculate based on that.
+
+        The string names will be nice for the front end to display a name for the transaction
+
+        A negative number should indicate a negative subtraction from the total. In the examples above, expense 1 should ADD money
+        to the envelope it's tied to
 
 Write Tests
     - Test JSON saving
+    - Test reading JSON on startup
     - Test INITIALIZATION is actually working
     - Test JSON deleting
-"""
 
-# i don't think the total from the envelopes is beign saved anywhere
+
+LONGER-TERM:
+    - Move all logic to a web server
+"""
 
 import os, json
 from start_file import init_incomes, init_envelopes
 from num_crunching import get_remaining_total, get_total_incomes, get_env_total
 from json_creation import save_jsons, delete_jsons
 
+# Global variables here
+# Many of these could probably be changed from caps depending on what should change throughout the process. 
 CONTINUE = True
 INCOMES_LIST = {}
 TOTAL_INCOME = 0
 ENVELOPES = {}
 DEFAULT_PATH = ''
 INITIALIZATION = True
+
+# This is not a constant variable, but it is global. 
 envelope_totals = 0
 
 
