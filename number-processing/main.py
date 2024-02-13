@@ -78,7 +78,8 @@ HAS_GOTTEN_REMANING_TOTAL = False
 
 
 # Sets initialization to true or false,
-def initialize():
+def initialize(ENVELOPES, INCOMES_LIST):
+    global INITIALIZATION
     if os.path.isfile('../income.json') and os.path.isfile("../envelopes.json"):
         print("Initialization skipped, moving on.")
         INITIALIZATION = False
@@ -96,7 +97,7 @@ def initialize():
 
 # Runs initialization logic to see if incomes/envelopes need to be generated
 # Will be deprecated when we move to a web server, so not super crucial. But would help development I think.
-initialize()
+initialize(ENVELOPES, INCOMES_LIST)
 
 # Sets the main loop
 while CONTINUE:
