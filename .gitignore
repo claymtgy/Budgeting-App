@@ -131,3 +131,10 @@ dist
 number-processing/__pycache__/json_creation.cpython-311.pyc
 number-processing/__pycache__/num_crunching.cpython-311.pyc
 number-processing/__pycache__/start_file.cpython-311.pyc
+
+# venv directory
+.venv/
+
+# Incomes and envelope testing files
+incomes.json
+envelopes.json
