@@ -101,7 +101,11 @@ initialize(ENVELOPES, INCOMES_LIST)
 
 # Sets the main loop
 while CONTINUE:
+<<<<<<< HEAD
     selection = int(input('Press 1 to get total income, 2 to get envelope totals, or 3 to get remaining. 4 re-run initialization, 5 will save incomes. 6 will stop the program\n'))
+=======
+    selection = int(input("Press 1 to get total income, 2 to get envelope totals, or 3 to get remaining. 4 doesn't do anything, 5 will save incomes. 6 will stop the program"))
+>>>>>>> 273a7cd (Changed the text line on main.py)
     if selection == 1:
         print("Getting total income")
         TOTAL_INCOME = get_total_incomes(INCOMES_LIST)
