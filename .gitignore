@@ -93,16 +93,12 @@ dist
 
 # Gatsby files
 .cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
 
 # vuepress build output
 .vuepress/dist
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Docusaurus cache and generated files
 .docusaurus
@@ -128,13 +124,27 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-number-processing/__pycache__/json_creation.cpython-311.pyc
-number-processing/__pycache__/num_crunching.cpython-311.pyc
-number-processing/__pycache__/start_file.cpython-311.pyc
 
-# venv directory
+# Go
+backend/server
+backend/bin/
+*.exe
+*.test
+
+# Production backups (created on VPS)
+backups/
+
+# PWA dev output (vite-plugin-pwa)
+frontend/dev-dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Python (legacy)
+__pycache__/
+*.pyc
 .venv/
-
-# Incomes and envelope testing files
-incomes.json
-envelopes.json
