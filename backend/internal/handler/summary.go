@@ -17,13 +17,13 @@ func NewSummaryHandler(repo *repository.Repository) *SummaryHandler {
 }
 
 func (h *SummaryHandler) Get(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	summary, err := h.repo.GetSummary(r.Context(), userID)
+	summary, err := h.repo.GetSummary(r.Context(), householdID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load summary")
 		return

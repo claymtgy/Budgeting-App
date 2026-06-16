@@ -22,24 +22,19 @@ func New(pool *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string) (*model.User, error) {
-	var user model.User
-	err := r.pool.QueryRow(ctx,
-		`INSERT INTO users (email, password_hash) VALUES ($1, $2)
-		 RETURNING id, email, password_hash, created_at`,
-		email, passwordHash,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	user, _, err := r.RegisterUser(ctx, email, passwordHash, "")
 	if err != nil {
-		return nil, fmt.Errorf("create user: %w", err)
+		return nil, err
 	}
-	return &user, nil
+	return user, nil
 }
 
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, email, password_hash, created_at FROM users WHERE email = $1`,
+		`SELECT id, email, password_hash, household_id, created_at FROM users WHERE email = $1`,
 		email,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.HouseholdID, &user.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -52,9 +47,9 @@ func (r *Repository) GetUserByEmail(ctx context.Context, email string) (*model.U
 func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, email, password_hash, created_at FROM users WHERE id = $1`,
+		`SELECT id, email, password_hash, household_id, created_at FROM users WHERE id = $1`,
 		id,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.HouseholdID, &user.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -64,11 +59,11 @@ func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User
 	return &user, nil
 }
 
-func (r *Repository) ListIncomes(ctx context.Context, userID uuid.UUID) ([]model.Income, error) {
+func (r *Repository) ListIncomes(ctx context.Context, householdID uuid.UUID) ([]model.Income, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, amount_cents, period, created_at, updated_at
-		 FROM incomes WHERE user_id = $1 ORDER BY created_at DESC`,
-		userID,
+		`SELECT id, household_id, name, amount_cents, period, created_at, updated_at
+		 FROM incomes WHERE household_id = $1 ORDER BY created_at DESC`,
+		householdID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list incomes: %w", err)
@@ -78,7 +73,7 @@ func (r *Repository) ListIncomes(ctx context.Context, userID uuid.UUID) ([]model
 	var incomes []model.Income
 	for rows.Next() {
 		var income model.Income
-		if err := rows.Scan(&income.ID, &income.UserID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt); err != nil {
+		if err := rows.Scan(&income.ID, &income.HouseholdID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan income: %w", err)
 		}
 		incomes = append(incomes, income)
@@ -86,28 +81,28 @@ func (r *Repository) ListIncomes(ctx context.Context, userID uuid.UUID) ([]model
 	return incomes, rows.Err()
 }
 
-func (r *Repository) CreateIncome(ctx context.Context, userID uuid.UUID, name string, amountCents int64, period string) (*model.Income, error) {
+func (r *Repository) CreateIncome(ctx context.Context, householdID uuid.UUID, name string, amountCents int64, period string) (*model.Income, error) {
 	var income model.Income
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO incomes (user_id, name, amount_cents, period)
+		`INSERT INTO incomes (household_id, name, amount_cents, period)
 		 VALUES ($1, $2, $3, $4)
-		 RETURNING id, user_id, name, amount_cents, period, created_at, updated_at`,
-		userID, name, amountCents, period,
-	).Scan(&income.ID, &income.UserID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt)
+		 RETURNING id, household_id, name, amount_cents, period, created_at, updated_at`,
+		householdID, name, amountCents, period,
+	).Scan(&income.ID, &income.HouseholdID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create income: %w", err)
 	}
 	return &income, nil
 }
 
-func (r *Repository) UpdateIncome(ctx context.Context, userID, id uuid.UUID, name string, amountCents int64, period string) (*model.Income, error) {
+func (r *Repository) UpdateIncome(ctx context.Context, householdID, id uuid.UUID, name string, amountCents int64, period string) (*model.Income, error) {
 	var income model.Income
 	err := r.pool.QueryRow(ctx,
 		`UPDATE incomes SET name = $1, amount_cents = $2, period = $3, updated_at = NOW()
-		 WHERE id = $4 AND user_id = $5
-		 RETURNING id, user_id, name, amount_cents, period, created_at, updated_at`,
-		name, amountCents, period, id, userID,
-	).Scan(&income.ID, &income.UserID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt)
+		 WHERE id = $4 AND household_id = $5
+		 RETURNING id, household_id, name, amount_cents, period, created_at, updated_at`,
+		name, amountCents, period, id, householdID,
+	).Scan(&income.ID, &income.HouseholdID, &income.Name, &income.AmountCents, &income.Period, &income.CreatedAt, &income.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -117,8 +112,8 @@ func (r *Repository) UpdateIncome(ctx context.Context, userID, id uuid.UUID, nam
 	return &income, nil
 }
 
-func (r *Repository) DeleteIncome(ctx context.Context, userID, id uuid.UUID) error {
-	tag, err := r.pool.Exec(ctx, `DELETE FROM incomes WHERE id = $1 AND user_id = $2`, id, userID)
+func (r *Repository) DeleteIncome(ctx context.Context, householdID, id uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM incomes WHERE id = $1 AND household_id = $2`, id, householdID)
 	if err != nil {
 		return fmt.Errorf("delete income: %w", err)
 	}
@@ -128,11 +123,11 @@ func (r *Repository) DeleteIncome(ctx context.Context, userID, id uuid.UUID) err
 	return nil
 }
 
-func (r *Repository) ListEnvelopes(ctx context.Context, userID uuid.UUID) ([]model.Envelope, error) {
+func (r *Repository) ListEnvelopes(ctx context.Context, householdID uuid.UUID) ([]model.Envelope, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, allocated_cents, created_at, updated_at
-		 FROM envelopes WHERE user_id = $1 ORDER BY created_at DESC`,
-		userID,
+		`SELECT id, household_id, name, allocated_cents, created_at, updated_at
+		 FROM envelopes WHERE household_id = $1 ORDER BY created_at DESC`,
+		householdID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list envelopes: %w", err)
@@ -142,7 +137,7 @@ func (r *Repository) ListEnvelopes(ctx context.Context, userID uuid.UUID) ([]mod
 	var envelopes []model.Envelope
 	for rows.Next() {
 		var envelope model.Envelope
-		if err := rows.Scan(&envelope.ID, &envelope.UserID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt); err != nil {
+		if err := rows.Scan(&envelope.ID, &envelope.HouseholdID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan envelope: %w", err)
 		}
 		envelopes = append(envelopes, envelope)
@@ -150,28 +145,28 @@ func (r *Repository) ListEnvelopes(ctx context.Context, userID uuid.UUID) ([]mod
 	return envelopes, rows.Err()
 }
 
-func (r *Repository) CreateEnvelope(ctx context.Context, userID uuid.UUID, name string, allocatedCents int64) (*model.Envelope, error) {
+func (r *Repository) CreateEnvelope(ctx context.Context, householdID uuid.UUID, name string, allocatedCents int64) (*model.Envelope, error) {
 	var envelope model.Envelope
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO envelopes (user_id, name, allocated_cents)
+		`INSERT INTO envelopes (household_id, name, allocated_cents)
 		 VALUES ($1, $2, $3)
-		 RETURNING id, user_id, name, allocated_cents, created_at, updated_at`,
-		userID, name, allocatedCents,
-	).Scan(&envelope.ID, &envelope.UserID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt)
+		 RETURNING id, household_id, name, allocated_cents, created_at, updated_at`,
+		householdID, name, allocatedCents,
+	).Scan(&envelope.ID, &envelope.HouseholdID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create envelope: %w", err)
 	}
 	return &envelope, nil
 }
 
-func (r *Repository) UpdateEnvelope(ctx context.Context, userID, id uuid.UUID, name string, allocatedCents int64) (*model.Envelope, error) {
+func (r *Repository) UpdateEnvelope(ctx context.Context, householdID, id uuid.UUID, name string, allocatedCents int64) (*model.Envelope, error) {
 	var envelope model.Envelope
 	err := r.pool.QueryRow(ctx,
 		`UPDATE envelopes SET name = $1, allocated_cents = $2, updated_at = NOW()
-		 WHERE id = $3 AND user_id = $4
-		 RETURNING id, user_id, name, allocated_cents, created_at, updated_at`,
-		name, allocatedCents, id, userID,
-	).Scan(&envelope.ID, &envelope.UserID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt)
+		 WHERE id = $3 AND household_id = $4
+		 RETURNING id, household_id, name, allocated_cents, created_at, updated_at`,
+		name, allocatedCents, id, householdID,
+	).Scan(&envelope.ID, &envelope.HouseholdID, &envelope.Name, &envelope.AllocatedCents, &envelope.CreatedAt, &envelope.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -181,8 +176,8 @@ func (r *Repository) UpdateEnvelope(ctx context.Context, userID, id uuid.UUID, n
 	return &envelope, nil
 }
 
-func (r *Repository) DeleteEnvelope(ctx context.Context, userID, id uuid.UUID) error {
-	tag, err := r.pool.Exec(ctx, `DELETE FROM envelopes WHERE id = $1 AND user_id = $2`, id, userID)
+func (r *Repository) DeleteEnvelope(ctx context.Context, householdID, id uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM envelopes WHERE id = $1 AND household_id = $2`, id, householdID)
 	if err != nil {
 		return fmt.Errorf("delete envelope: %w", err)
 	}
@@ -192,11 +187,11 @@ func (r *Repository) DeleteEnvelope(ctx context.Context, userID, id uuid.UUID) e
 	return nil
 }
 
-func (r *Repository) ListExpenses(ctx context.Context, userID uuid.UUID) ([]model.Expense, error) {
+func (r *Repository) ListExpenses(ctx context.Context, householdID uuid.UUID) ([]model.Expense, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at
-		 FROM expenses WHERE user_id = $1 ORDER BY expense_date DESC, created_at DESC`,
-		userID,
+		`SELECT id, household_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at
+		 FROM expenses WHERE household_id = $1 ORDER BY expense_date DESC, created_at DESC`,
+		householdID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list expenses: %w", err)
@@ -206,7 +201,7 @@ func (r *Repository) ListExpenses(ctx context.Context, userID uuid.UUID) ([]mode
 	var expenses []model.Expense
 	for rows.Next() {
 		var expense model.Expense
-		if err := rows.Scan(&expense.ID, &expense.UserID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt); err != nil {
+		if err := rows.Scan(&expense.ID, &expense.HouseholdID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan expense: %w", err)
 		}
 		expenses = append(expenses, expense)
@@ -214,15 +209,15 @@ func (r *Repository) ListExpenses(ctx context.Context, userID uuid.UUID) ([]mode
 	return expenses, rows.Err()
 }
 
-func (r *Repository) CreateExpense(ctx context.Context, userID, envelopeID uuid.UUID, amountCents int64, description, expenseDate string) (*model.Expense, error) {
+func (r *Repository) CreateExpense(ctx context.Context, householdID, envelopeID uuid.UUID, amountCents int64, description, expenseDate string) (*model.Expense, error) {
 	var expense model.Expense
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO expenses (user_id, envelope_id, amount_cents, description, expense_date)
+		`INSERT INTO expenses (household_id, envelope_id, amount_cents, description, expense_date)
 		 SELECT $1, $2, $3, $4, $5::date
-		 WHERE EXISTS (SELECT 1 FROM envelopes WHERE id = $2 AND user_id = $1)
-		 RETURNING id, user_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at`,
-		userID, envelopeID, amountCents, description, expenseDate,
-	).Scan(&expense.ID, &expense.UserID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt)
+		 WHERE EXISTS (SELECT 1 FROM envelopes WHERE id = $2 AND household_id = $1)
+		 RETURNING id, household_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at`,
+		householdID, envelopeID, amountCents, description, expenseDate,
+	).Scan(&expense.ID, &expense.HouseholdID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -232,14 +227,14 @@ func (r *Repository) CreateExpense(ctx context.Context, userID, envelopeID uuid.
 	return &expense, nil
 }
 
-func (r *Repository) VoidExpense(ctx context.Context, userID, id uuid.UUID) (*model.Expense, error) {
+func (r *Repository) VoidExpense(ctx context.Context, householdID, id uuid.UUID) (*model.Expense, error) {
 	var expense model.Expense
 	err := r.pool.QueryRow(ctx,
 		`UPDATE expenses SET voided = TRUE, updated_at = NOW()
-		 WHERE id = $1 AND user_id = $2
-		 RETURNING id, user_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at`,
-		id, userID,
-	).Scan(&expense.ID, &expense.UserID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt)
+		 WHERE id = $1 AND household_id = $2
+		 RETURNING id, household_id, envelope_id, amount_cents, description, expense_date::text, voided, created_at, updated_at`,
+		id, householdID,
+	).Scan(&expense.ID, &expense.HouseholdID, &expense.EnvelopeID, &expense.AmountCents, &expense.Description, &expense.ExpenseDate, &expense.Voided, &expense.CreatedAt, &expense.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -249,18 +244,18 @@ func (r *Repository) VoidExpense(ctx context.Context, userID, id uuid.UUID) (*mo
 	return &expense, nil
 }
 
-func (r *Repository) GetSummary(ctx context.Context, userID uuid.UUID) (*model.BudgetSummary, error) {
-	incomes, err := r.ListIncomes(ctx, userID)
+func (r *Repository) GetSummary(ctx context.Context, householdID uuid.UUID) (*model.BudgetSummary, error) {
+	incomes, err := r.ListIncomes(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
 
-	envelopes, err := r.ListEnvelopes(ctx, userID)
+	envelopes, err := r.ListEnvelopes(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}
 
-	expenses, err := r.ListExpenses(ctx, userID)
+	expenses, err := r.ListExpenses(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}

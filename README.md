@@ -30,6 +30,15 @@ docker compose up --build
 
 4. Register a new account, then add incomes, envelope allocations, and expenses from the UI.
 
+### Family budgets
+
+Each account belongs to a **household**. On signup:
+
+- **Leave join code blank** to create a new family budget — you'll receive an 8-character code to share.
+- **Enter a join code** from a family member to access the same budget.
+
+The family join code appears in the app header (tap to copy). All household members see and edit the same incomes, envelopes, and expenses.
+
 ## Local development
 
 ### Backend only (Docker)

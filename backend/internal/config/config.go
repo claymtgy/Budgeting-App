@@ -13,10 +13,11 @@ var defaultCORSOrigins = []string{
 }
 
 type Config struct {
-	DatabaseURL string
-	JWTSecret   string
-	Port        string
-	CORSOrigins []string
+	DatabaseURL    string
+	JWTSecret      string
+	Port           string
+	CORSOrigins    []string
+	MigrationsPath string
 }
 
 func Load() (*Config, error) {
@@ -35,11 +36,17 @@ func Load() (*Config, error) {
 		port = "8080"
 	}
 
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	}
+
 	return &Config{
-		DatabaseURL: dbURL,
-		JWTSecret:   jwtSecret,
-		Port:        port,
-		CORSOrigins: parseCORSOrigins(os.Getenv("CORS_ORIGINS")),
+		DatabaseURL:    dbURL,
+		JWTSecret:      jwtSecret,
+		Port:           port,
+		CORSOrigins:    parseCORSOrigins(os.Getenv("CORS_ORIGINS")),
+		MigrationsPath: migrationsPath,
 	}, nil
 }
 

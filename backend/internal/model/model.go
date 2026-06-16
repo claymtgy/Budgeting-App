@@ -10,22 +10,29 @@ type User struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
+	HouseholdID  uuid.UUID `json:"household_id"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type Household struct {
+	ID        uuid.UUID `json:"id"`
+	JoinCode  string    `json:"join_code"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Income struct {
-	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"user_id"`
-	Name        string    `json:"name"`
-	AmountCents int64     `json:"amount_cents"`
-	Period      string    `json:"period"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID           uuid.UUID `json:"id"`
+	HouseholdID  uuid.UUID `json:"household_id"`
+	Name         string    `json:"name"`
+	AmountCents  int64     `json:"amount_cents"`
+	Period       string    `json:"period"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Envelope struct {
 	ID             uuid.UUID `json:"id"`
-	UserID         uuid.UUID `json:"user_id"`
+	HouseholdID    uuid.UUID `json:"household_id"`
 	Name           string    `json:"name"`
 	AllocatedCents int64     `json:"allocated_cents"`
 	CreatedAt      time.Time `json:"created_at"`
@@ -34,7 +41,7 @@ type Envelope struct {
 
 type Expense struct {
 	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"user_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
 	EnvelopeID  uuid.UUID `json:"envelope_id"`
 	AmountCents int64     `json:"amount_cents"`
 	Description string    `json:"description"`

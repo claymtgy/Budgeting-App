@@ -27,13 +27,13 @@ type expenseRequest struct {
 }
 
 func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	expenses, err := h.repo.ListExpenses(r.Context(), userID)
+	expenses, err := h.repo.ListExpenses(r.Context(), householdID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list expenses")
 		return
@@ -45,7 +45,7 @@ func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -71,7 +71,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := h.repo.CreateExpense(r.Context(), userID, envelopeID, req.AmountCents, req.Description, req.ExpenseDate)
+	expense, err := h.repo.CreateExpense(r.Context(), householdID, envelopeID, req.AmountCents, req.Description, req.ExpenseDate)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "envelope not found")
 		return
@@ -84,7 +84,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExpenseHandler) Void(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -96,7 +96,7 @@ func (h *ExpenseHandler) Void(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := h.repo.VoidExpense(r.Context(), userID, id)
+	expense, err := h.repo.VoidExpense(r.Context(), householdID, id)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "expense not found")
 		return

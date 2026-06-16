@@ -27,7 +27,11 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	if err := db.RunMigrations(cfg.DatabaseURL); err != nil {
+	if err := db.WaitForDatabase(context.Background(), cfg.DatabaseURL); err != nil {
+		log.Fatalf("database: %v", err)
+	}
+
+	if err := db.RunMigrations(cfg.DatabaseURL, cfg.MigrationsPath); err != nil {
 		log.Fatalf("migrations: %v", err)
 	}
 
@@ -71,7 +75,10 @@ func main() {
 			r.Use(middleware.Auth(tokens))
 			r.Get("/auth/me", authHandler.Me)
 
-			r.Get("/incomes", incomeHandler.List)
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.Household(repo))
+
+				r.Get("/incomes", incomeHandler.List)
 			r.Post("/incomes", incomeHandler.Create)
 			r.Put("/incomes/{id}", incomeHandler.Update)
 			r.Delete("/incomes/{id}", incomeHandler.Delete)
@@ -86,6 +93,7 @@ func main() {
 			r.Put("/expenses/{id}/void", expenseHandler.Void)
 
 			r.Get("/summary", summaryHandler.Get)
+			})
 		})
 	})
 

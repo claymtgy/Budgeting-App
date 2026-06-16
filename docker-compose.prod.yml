@@ -24,6 +24,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      MIGRATIONS_PATH: /app/migrations
       PORT: 8080
     depends_on:
       db:

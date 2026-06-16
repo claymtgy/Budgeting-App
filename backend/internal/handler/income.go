@@ -26,13 +26,13 @@ type incomeRequest struct {
 }
 
 func (h *IncomeHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	incomes, err := h.repo.ListIncomes(r.Context(), userID)
+	incomes, err := h.repo.ListIncomes(r.Context(), householdID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list incomes")
 		return
@@ -44,7 +44,7 @@ func (h *IncomeHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IncomeHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -63,7 +63,7 @@ func (h *IncomeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		req.Period = "monthly"
 	}
 
-	income, err := h.repo.CreateIncome(r.Context(), userID, req.Name, req.AmountCents, req.Period)
+	income, err := h.repo.CreateIncome(r.Context(), householdID, req.Name, req.AmountCents, req.Period)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create income")
 		return
@@ -72,7 +72,7 @@ func (h *IncomeHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IncomeHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -97,7 +97,7 @@ func (h *IncomeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		req.Period = "monthly"
 	}
 
-	income, err := h.repo.UpdateIncome(r.Context(), userID, id, req.Name, req.AmountCents, req.Period)
+	income, err := h.repo.UpdateIncome(r.Context(), householdID, id, req.Name, req.AmountCents, req.Period)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "income not found")
 		return
@@ -110,7 +110,7 @@ func (h *IncomeHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IncomeHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -122,7 +122,7 @@ func (h *IncomeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.DeleteIncome(r.Context(), userID, id); errors.Is(err, repository.ErrNotFound) {
+	if err := h.repo.DeleteIncome(r.Context(), householdID, id); errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "income not found")
 		return
 	} else if err != nil {

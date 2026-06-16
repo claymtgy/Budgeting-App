@@ -25,13 +25,13 @@ type envelopeRequest struct {
 }
 
 func (h *EnvelopeHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	envelopes, err := h.repo.ListEnvelopes(r.Context(), userID)
+	envelopes, err := h.repo.ListEnvelopes(r.Context(), householdID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list envelopes")
 		return
@@ -43,7 +43,7 @@ func (h *EnvelopeHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EnvelopeHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -59,7 +59,7 @@ func (h *EnvelopeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envelope, err := h.repo.CreateEnvelope(r.Context(), userID, req.Name, req.AllocatedCents)
+	envelope, err := h.repo.CreateEnvelope(r.Context(), householdID, req.Name, req.AllocatedCents)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create envelope")
 		return
@@ -68,7 +68,7 @@ func (h *EnvelopeHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EnvelopeHandler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -90,7 +90,7 @@ func (h *EnvelopeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envelope, err := h.repo.UpdateEnvelope(r.Context(), userID, id, req.Name, req.AllocatedCents)
+	envelope, err := h.repo.UpdateEnvelope(r.Context(), householdID, id, req.Name, req.AllocatedCents)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "envelope not found")
 		return
@@ -103,7 +103,7 @@ func (h *EnvelopeHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EnvelopeHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -115,7 +115,7 @@ func (h *EnvelopeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.DeleteEnvelope(r.Context(), userID, id); errors.Is(err, repository.ErrNotFound) {
+	if err := h.repo.DeleteEnvelope(r.Context(), householdID, id); errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "envelope not found")
 		return
 	} else if err != nil {

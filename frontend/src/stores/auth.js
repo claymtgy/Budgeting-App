@@ -7,7 +7,8 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('user') || 'null')
   }),
   getters: {
-    isAuthenticated: (state) => Boolean(state.token)
+    isAuthenticated: (state) => Boolean(state.token),
+    joinCode: (state) => state.user?.join_code || ''
   },
   actions: {
     setSession(token, user) {
@@ -22,8 +23,12 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
     },
-    async register(email, password) {
-      const { data } = await api.post('/api/auth/register', { email, password })
+    async register(email, password, joinCode = '') {
+      const { data } = await api.post('/api/auth/register', {
+        email,
+        password,
+        join_code: joinCode.trim().toUpperCase()
+      })
       this.setSession(data.token, data.user)
     },
     async login(email, password) {

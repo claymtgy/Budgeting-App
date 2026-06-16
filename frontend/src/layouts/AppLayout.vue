@@ -1,10 +1,12 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const copied = ref(false)
 
 const navItems = [
   { to: '/', name: 'home', label: 'Add', icon: '+' },
@@ -12,6 +14,12 @@ const navItems = [
   { to: '/incomes', name: 'incomes', label: 'Incomes', icon: '$' },
   { to: '/envelopes', name: 'envelopes', label: 'Envelopes', icon: '✉' }
 ]
+
+onMounted(() => {
+  if (auth.isAuthenticated && !auth.joinCode) {
+    auth.fetchMe()
+  }
+})
 
 function logout() {
   auth.logout()
@@ -21,6 +29,19 @@ function logout() {
 function isNavActive(item) {
   return route.name === item.name
 }
+
+async function copyJoinCode() {
+  if (!auth.joinCode) return
+  try {
+    await navigator.clipboard.writeText(auth.joinCode)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch {
+    // clipboard unavailable
+  }
+}
 </script>
 
 <template>
@@ -28,7 +49,19 @@ function isNavActive(item) {
     <header class="header">
       <div class="header-inner">
         <h1 class="app-title">Envelope Budget</h1>
-        <button class="btn-icon" type="button" aria-label="Log out" @click="logout">⎋</button>
+        <div class="header-actions">
+          <button
+            v-if="auth.joinCode"
+            class="join-code-btn"
+            type="button"
+            :title="copied ? 'Copied!' : 'Copy family join code'"
+            @click="copyJoinCode"
+          >
+            <span class="join-code-label">Family code</span>
+            <span class="join-code-value">{{ auth.joinCode }}</span>
+          </button>
+          <button class="btn-icon" type="button" aria-label="Log out" @click="logout">⎋</button>
+        </div>
       </div>
     </header>
 
@@ -70,6 +103,7 @@ function isNavActive(item) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.85rem 1rem;
   padding-top: max(0.85rem, env(safe-area-inset-top));
 }
@@ -78,6 +112,40 @@ function isNavActive(item) {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.join-code-btn {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.join-code-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.join-code-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }
 
 .btn-icon {
@@ -89,6 +157,7 @@ function isNavActive(item) {
   border-radius: 8px;
   font-size: 1.1rem;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .main-content {

@@ -21,6 +21,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://budget:budget@db:5432/budgeting?sslmode=disable}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      MIGRATIONS_PATH: /app/migrations
       PORT: 8080
     ports:
       - "8080:8080"

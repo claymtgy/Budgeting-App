@@ -19,7 +19,13 @@ func NewAuthHandler(repo *repository.Repository, tokens *auth.TokenService) *Aut
 	return &AuthHandler{repo: repo, tokens: tokens}
 }
 
-type authRequest struct {
+type registerRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	JoinCode string `json:"join_code"`
+}
+
+type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -30,12 +36,17 @@ type authResponse struct {
 }
 
 type userPayload struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	JoinCode string `json:"join_code"`
+}
+
+func userPayloadFrom(userID, email, joinCode string) userPayload {
+	return userPayload{ID: userID, Email: email, JoinCode: joinCode}
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req authRequest
+	var req registerRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -53,7 +64,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.repo.CreateUser(r.Context(), email, hash)
+	user, household, err := h.repo.RegisterUser(r.Context(), email, hash, req.JoinCode)
+	if errors.Is(err, repository.ErrInvalidJoinCode) {
+		writeError(w, http.StatusBadRequest, "invalid join code")
+		return
+	}
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
 			writeError(w, http.StatusConflict, "email already registered")
@@ -71,12 +86,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, authResponse{
 		Token: token,
-		User:  userPayload{ID: user.ID.String(), Email: user.Email},
+		User:  userPayloadFrom(user.ID.String(), user.Email, household.JoinCode),
 	})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req authRequest
+	var req loginRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -98,6 +113,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	household, err := h.repo.GetHouseholdByUserID(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not log in")
+		return
+	}
+
 	token, err := h.tokens.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create session")
@@ -106,7 +127,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, authResponse{
 		Token: token,
-		User:  userPayload{ID: user.ID.String(), Email: user.Email},
+		User:  userPayloadFrom(user.ID.String(), user.Email, household.JoinCode),
 	})
 }
 
@@ -127,5 +148,11 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, userPayload{ID: user.ID.String(), Email: user.Email})
+	household, err := h.repo.GetHouseholdByUserID(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load household")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, userPayloadFrom(user.ID.String(), user.Email, household.JoinCode))
 }
