@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod-nginx.yml}"
+COMPOSE_PROJECT="${COMPOSE_PROJECT:-budgeting}"
+
 if [[ ! -f .env ]]; then
   echo "Missing .env in repo root" >&2
   exit 1
@@ -21,7 +24,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 FILE="$BACKUP_DIR/budgeting-${STAMP}.sql"
 
 echo "Writing backup to $FILE"
-docker compose -f docker-compose.prod.yml exec -T db \
+docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE" exec -T db \
   pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > "$FILE"
 
 echo "Done."

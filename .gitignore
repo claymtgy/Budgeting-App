@@ -134,6 +134,9 @@ backend/bin/
 # Production backups (created on VPS)
 backups/
 
+# Local nginx config copies on VPS (optional)
+deploy/nginx/budgeting.conf
+
 # PWA dev output (vite-plugin-pwa)
 frontend/dev-dist/
 

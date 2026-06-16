@@ -110,13 +110,18 @@ The frontend is a Progressive Web App. After building (`docker compose up --buil
 
 ## Production deployment
 
-See **[DEPLOY.md](DEPLOY.md)** for the full VPS checklist (DNS, Docker, SSL via Caddy, backups).
+See **[DEPLOY.md](DEPLOY.md)** for the full VPS checklist.
 
-Quick production start:
+**Already running nginx for other sites (e.g. casashoa.com)?** Use the nginx guide in DEPLOY.md — do **not** use `docker-compose.prod.yml` (Caddy). Use:
+
+```bash
+docker compose -p budgeting -f docker-compose.prod-nginx.yml up -d --build
+```
+
+**Empty VPS?** Use Caddy:
 
 ```bash
 cp .env.production.example .env
-# edit .env with your domains and secrets
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 

@@ -1,5 +1,131 @@
 # VPS deployment guide
 
+Deploy the app as Docker containers with HTTPS.
+
+## Deployment options
+
+| Setup | Compose file | TLS |
+|-------|--------------|-----|
+| Standalone VPS (no existing nginx) | `docker-compose.prod.yml` | Caddy (built-in) |
+| **Alongside existing nginx** (e.g. casashoa.com) | `docker-compose.prod-nginx.yml` | Your nginx + certbot |
+
+---
+
+## Deploy alongside existing nginx (recommended if you already host other sites)
+
+Use this when nginx already listens on ports 80/443 for another domain (like `casashoa.com`). **Do not run Caddy** — it would fight nginx for those ports.
+
+### Architecture
+
+```
+Internet :443/:80
+    └── Your existing nginx (casashoa + budgeting server blocks)
+            ├── budget.example.com      → budgeting-frontend:80
+            ├── api.budget.example.com  → budgeting-backend:8080
+            └── *.casashoa.com          → (unchanged)
+```
+
+Budgeting containers use **different service names** (`budgeting-backend`, `budgeting-frontend`) so they never collide with casashoa's `backend` / `frontend`.
+
+### Step 1: DNS
+
+A records for your **budgeting domains** → same VPS IP as casashoa (that's fine).
+
+### Step 2: Shared Docker network
+
+Find the network your nginx container uses:
+
+```bash
+docker ps --format '{{.Names}}' | head   # find nginx container name
+docker inspect <nginx-container> --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+```
+
+Create a shared network if needed, and connect nginx:
+
+```bash
+docker network create edge    # skip if it already exists
+docker network connect edge <nginx-container>
+```
+
+Set in `.env`:
+
+```env
+EDGE_NETWORK=edge
+```
+
+(Use your actual network name if different.)
+
+### Step 3: Deploy budgeting stack
+
+```bash
+cd Budgeting-App
+cp .env.production.example .env
+nano .env   # set domains, secrets, VITE_API_URL, CORS_ORIGINS, EDGE_NETWORK
+
+docker compose -p budgeting -f docker-compose.prod-nginx.yml up -d --build
+```
+
+Verify budgeting containers joined `edge`:
+
+```bash
+docker network inspect edge --format '{{range .Containers}}{{.Name}} {{end}}'
+# should list nginx, budgeting-backend, budgeting-frontend
+```
+
+### Step 4: Add nginx config
+
+Copy and edit the example:
+
+```bash
+cp deploy/nginx/budgeting.conf.example deploy/nginx/budgeting.conf
+nano deploy/nginx/budgeting.conf
+```
+
+Replace `budget.example.com` and `api.budget.example.com` with your real domains.
+
+Include it from your main nginx config:
+
+```nginx
+include /path/to/Budgeting-App/deploy/nginx/budgeting.conf;
+```
+
+Or paste the `server { ... }` blocks into your existing config file. **Do not modify** the casashoa `server_name` blocks.
+
+### Step 5: SSL certificates for budgeting domains
+
+Using your existing certbot webroot (`/var/www/certbot`):
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d budget.example.com -d api.budget.example.com
+```
+
+Update cert paths in `budgeting.conf` if certbot used a different layout.
+
+### Step 6: Reload nginx and test
+
+```bash
+docker exec <nginx-container> nginx -t
+docker exec <nginx-container> nginx -s reload
+```
+
+```bash
+curl https://api.budget.example.com/health
+curl -I https://budget.example.com
+```
+
+### Updating
+
+```bash
+cd Budgeting-App
+git pull
+docker compose -p budgeting -f docker-compose.prod-nginx.yml up -d --build
+```
+
+---
+
+## Standalone VPS (Caddy)
+
 Deploy the app as Docker containers with automatic HTTPS via Caddy and Let's Encrypt.
 
 ## Architecture
@@ -16,8 +142,10 @@ Internet :443/:80
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.prod.yml` | Production services (no exposed db/backend ports) |
-| `Caddyfile` | Reverse proxy + automatic SSL |
+| `docker-compose.prod.yml` | Standalone production (Caddy on 80/443) |
+| `docker-compose.prod-nginx.yml` | Behind existing nginx (no Caddy) |
+| `deploy/nginx/budgeting.conf.example` | Nginx server blocks for budgeting domains |
+| `Caddyfile` | Reverse proxy config (standalone only) |
 | `.env.production.example` | Template for production secrets and domains |
 | `scripts/backup-db.sh` | Postgres backup helper |
 

@@ -1,0 +1,104 @@
+# Nginx config for the budgeting app (separate domains from casashoa.com).
+# Copy or include from your main nginx config, e.g.:
+#   include /path/to/Budgeting-App/deploy/nginx/budgeting.conf;
+#
+# Replace:
+#   budget.example.com      → your APP_DOMAIN
+#   api.budget.example.com  → your API_DOMAIN
+#   cert paths              → your certbot certificate paths
+#
+# Prerequisites:
+#   1. budgeting stack running: docker compose -p budgeting -f docker-compose.prod-nginx.yml up -d
+#   2. nginx container on the same Docker network as budgeting-* services (EDGE_NETWORK, default: edge)
+#   3. SSL certs issued for both domains (certbot webroot below)
+
+# --- HTTP: ACME challenges + redirect to HTTPS ---
+server {
+    listen 80;
+    server_name budget.example.com api.budget.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- Frontend (Vue PWA) ---
+server {
+    listen 443 ssl;
+    server_name budget.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/budget.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/budget.example.com/privkey.pem;
+
+    resolver 127.0.0.11 valid=30s;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+
+    # PWA / service worker — do not cache aggressively
+    location ~* ^/(sw\.js|workbox-.*\.js|manifest\.webmanifest)$ {
+        set $budget_frontend http://budgeting-frontend:80;
+        proxy_pass $budget_frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    location ~* \.(?:js|mjs|cjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|json|webmanifest|wasm|txt|xml)$ {
+        set $budget_frontend http://budgeting-frontend:80;
+        proxy_pass $budget_frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Accept-Encoding "";
+        proxy_set_header Connection "";
+    }
+
+    location / {
+        set $budget_frontend http://budgeting-frontend:80;
+        proxy_intercept_errors on;
+        error_page 404 = @budget_spa_fallback;
+        proxy_pass $budget_frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Accept-Encoding "";
+        proxy_set_header Connection "";
+    }
+
+    location @budget_spa_fallback {
+        rewrite ^ /index.html break;
+        set $budget_frontend http://budgeting-frontend:80;
+        proxy_pass $budget_frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Accept-Encoding "";
+        proxy_set_header Connection "";
+    }
+}
+
+# --- API (Go backend) ---
+server {
+    listen 443 ssl;
+    server_name api.budget.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/api.budget.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.budget.example.com/privkey.pem;
+
+    resolver 127.0.0.11 valid=30s;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+
+    location / {
+        set $budget_backend http://budgeting-backend:8080;
+        proxy_pass $budget_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+}

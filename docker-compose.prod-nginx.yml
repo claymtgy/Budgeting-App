@@ -1,0 +1,72 @@
+# Production behind an existing host/container nginx (no Caddy, no ports 80/443).
+#
+# Usage:
+#   docker network create edge   # once, if you don't already have a shared proxy network
+#   docker network connect edge <your-nginx-container>
+#   docker compose -p budgeting -f docker-compose.prod-nginx.yml up -d --build
+#
+# Nginx must proxy to budgeting-frontend:80 and budgeting-backend:8080 on the edge network.
+# See deploy/nginx/budgeting.conf.example
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - budgeting_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  budgeting-backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      MIGRATIONS_PATH: /app/migrations
+      PORT: 8080
+    networks:
+      - budgeting_internal
+      - edge
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  budgeting-frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    networks:
+      - edge
+    depends_on:
+      budgeting-backend:
+        condition: service_healthy
+
+networks:
+  budgeting_internal:
+    name: budgeting_internal
+  edge:
+    name: ${EDGE_NETWORK:-edge}
+    external: true
+
+volumes:
+  pgdata:
+    name: budgeting_pgdata
