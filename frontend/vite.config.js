@@ -19,7 +19,7 @@ export default defineConfig({
         short_name: 'Budget',
         description: 'Envelope method budgeting — track incomes, envelopes, and expenses.',
         theme_color: '#1a1a2e',
-        background_color: '#f4f6f8',
+        background_color: '#1a1a2e',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '/',
