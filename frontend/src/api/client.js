@@ -1,8 +1,16 @@
 import axios from 'axios'
 import router from '@/router'
 
+function resolveApiBaseURL() {
+  const configured = import.meta.env.VITE_API_URL
+  if (configured) return configured
+  // Vite dev server proxies /api to the backend (same origin, no CORS).
+  if (import.meta.env.DEV) return ''
+  return 'http://localhost:8080'
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  baseURL: resolveApiBaseURL()
 })
 
 api.interceptors.request.use((config) => {

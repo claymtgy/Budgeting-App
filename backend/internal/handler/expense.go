@@ -3,6 +3,8 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/claym/budgeting-app/internal/model"
 	"github.com/claym/budgeting-app/internal/middleware"
@@ -23,7 +25,23 @@ type expenseRequest struct {
 	EnvelopeID  string `json:"envelope_id"`
 	AmountCents int64  `json:"amount_cents"`
 	Description string `json:"description"`
+	Place       string `json:"place"`
 	ExpenseDate string `json:"expense_date"`
+}
+
+func (h *ExpenseHandler) ListPlaces(w http.ResponseWriter, r *http.Request) {
+	householdID, ok := middleware.HouseholdIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	places, err := h.repo.ListExpensePlaces(r.Context(), householdID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not list places")
+		return
+	}
+	writeJSON(w, http.StatusOK, places)
 }
 
 func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +51,27 @@ func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expenses, err := h.repo.ListExpenses(r.Context(), householdID)
+	fromDate := strings.TrimSpace(r.URL.Query().Get("from"))
+	toDate := strings.TrimSpace(r.URL.Query().Get("to"))
+
+	if fromDate != "" {
+		if _, err := time.Parse("2006-01-02", fromDate); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid from date")
+			return
+		}
+	}
+	if toDate != "" {
+		if _, err := time.Parse("2006-01-02", toDate); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid to date")
+			return
+		}
+	}
+	if fromDate != "" && toDate != "" && fromDate > toDate {
+		writeError(w, http.StatusBadRequest, "from date must be on or before to date")
+		return
+	}
+
+	expenses, err := h.repo.ListExpenses(r.Context(), householdID, fromDate, toDate)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list expenses")
 		return
@@ -71,7 +109,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := h.repo.CreateExpense(r.Context(), householdID, envelopeID, req.AmountCents, req.Description, req.ExpenseDate)
+	expense, err := h.repo.CreateExpense(r.Context(), householdID, envelopeID, req.AmountCents, req.Description, strings.TrimSpace(req.Place), req.ExpenseDate)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "envelope not found")
 		return

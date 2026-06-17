@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="108" fill="#1a1a2e"/>
+  <g transform="translate(96 118)">
+    <path
+      d="M16 48 L144 48 L160 88 L160 224 C160 237.3 149.3 248 136 248 L24 248 C10.7 248 0 237.3 0 224 L0 88 Z"
+      fill="#ffffff"
+    />
+    <path d="M16 48 L80 120 L144 48" fill="#ffffff"/>
+    <rect x="40" y="96" width="80" height="96" rx="8" fill="#ffffff"/>
+    <text
+      x="80"
+      y="162"
+      text-anchor="middle"
+      font-family="system-ui, -apple-system, Segoe UI, sans-serif"
+      font-size="56"
+      font-weight="700"
+      fill="#1a1a2e"
+    >$</text>
+  </g>
+</svg>

@@ -45,8 +45,15 @@ func main() {
 	repo := repository.New(pool)
 	tokens := auth.NewTokenService(cfg.JWTSecret)
 
+	if cfg.CORSAllowLocal {
+		log.Printf("CORS: local dev mode (localhost/127.0.0.1 on any port); defaults: %v", cfg.CORSOrigins)
+	} else {
+		log.Printf("CORS allowed origins: %v", cfg.CORSOrigins)
+	}
+
 	authHandler := handler.NewAuthHandler(repo, tokens)
 	incomeHandler := handler.NewIncomeHandler(repo)
+	incomeReceiptHandler := handler.NewIncomeReceiptHandler(repo)
 	envelopeHandler := handler.NewEnvelopeHandler(repo)
 	expenseHandler := handler.NewExpenseHandler(repo)
 	summaryHandler := handler.NewSummaryHandler(repo)
@@ -54,13 +61,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   cfg.CORSOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	r.Use(cors.Handler(buildCORSOptions(cfg)))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -88,7 +89,12 @@ func main() {
 			r.Put("/envelopes/{id}", envelopeHandler.Update)
 			r.Delete("/envelopes/{id}", envelopeHandler.Delete)
 
+			r.Get("/income-receipts", incomeReceiptHandler.List)
+			r.Post("/income-receipts", incomeReceiptHandler.Create)
+			r.Put("/income-receipts/{id}/void", incomeReceiptHandler.Void)
+
 			r.Get("/expenses", expenseHandler.List)
+			r.Get("/expenses/places", expenseHandler.ListPlaces)
 			r.Post("/expenses", expenseHandler.Create)
 			r.Put("/expenses/{id}/void", expenseHandler.Void)
 
@@ -121,4 +127,33 @@ func main() {
 		log.Fatalf("shutdown: %v", err)
 	}
 	fmt.Println("server stopped")
+}
+
+func buildCORSOptions(cfg *config.Config) cors.Options {
+	opts := cors.Options{
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}
+
+	if cfg.CORSAllowLocal {
+		allowed := make(map[string]struct{}, len(cfg.CORSOrigins))
+		for _, origin := range cfg.CORSOrigins {
+			allowed[origin] = struct{}{}
+		}
+		opts.AllowOriginFunc = func(_ *http.Request, origin string) bool {
+			if origin == "" {
+				return true
+			}
+			if _, ok := allowed[origin]; ok {
+				return true
+			}
+			return config.IsLocalOrigin(origin)
+		}
+	} else {
+		opts.AllowedOrigins = cfg.CORSOrigins
+	}
+
+	return opts
 }

@@ -30,11 +30,23 @@ type Income struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type IncomeReceipt struct {
+	ID          uuid.UUID `json:"id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	AmountCents int64     `json:"amount_cents"`
+	Description string    `json:"description"`
+	IncomeDate  string    `json:"income_date"`
+	Voided      bool      `json:"voided"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Envelope struct {
 	ID             uuid.UUID `json:"id"`
 	HouseholdID    uuid.UUID `json:"household_id"`
 	Name           string    `json:"name"`
 	AllocatedCents int64     `json:"allocated_cents"`
+	BalanceCents   int64     `json:"balance_cents"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -45,6 +57,7 @@ type Expense struct {
 	EnvelopeID  uuid.UUID `json:"envelope_id"`
 	AmountCents int64     `json:"amount_cents"`
 	Description string    `json:"description"`
+	Place       string    `json:"place"`
 	ExpenseDate string    `json:"expense_date"`
 	Voided      bool      `json:"voided"`
 	CreatedAt   time.Time `json:"created_at"`

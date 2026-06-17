@@ -10,6 +10,7 @@ const copied = ref(false)
 
 const navItems = [
   { to: '/', name: 'home', label: 'Add', icon: '+' },
+  { to: '/transactions', name: 'transactions', label: 'History', icon: '≡' },
   { to: '/dashboard', name: 'dashboard', label: 'Dashboard', icon: '◉' },
   { to: '/incomes', name: 'incomes', label: 'Incomes', icon: '$' },
   { to: '/envelopes', name: 'envelopes', label: 'Envelopes', icon: '✉' }

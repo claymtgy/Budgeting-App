@@ -31,7 +31,7 @@ func (r *Repository) RegisterUser(ctx context.Context, email, passwordHash, join
 				return nil, nil, err
 			}
 			err = tx.QueryRow(ctx,
-				`INSERT INTO households (join_code) VALUES ($1)
+				`INSERT INTO households (join_code, last_budget_month) VALUES ($1, date_trunc('month', CURRENT_DATE)::date)
 				 RETURNING id, join_code, created_at`,
 				code,
 			).Scan(&h.ID, &h.JoinCode, &h.CreatedAt)

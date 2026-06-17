@@ -1,19 +1,23 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api/client'
-import { dollarsToCents, formatCents, todayISO } from '@/utils/money'
+import { centsFromDigitInput, formatCents, formatDigitInputAsDollars, todayISO } from '@/utils/money'
 
 const expenses = ref([])
 const envelopes = ref([])
+const savedPlaces = ref([])
 const error = ref('')
 const success = ref('')
 const loading = ref(true)
 const submitting = ref(false)
 const showHistory = ref(false)
+const showPlaceSuggestions = ref(false)
 
 const envelopeId = ref('')
-const amount = ref('')
+const amountCents = ref(0)
+const amountDisplay = ref('')
 const description = ref('')
+const place = ref('')
 const expenseDate = ref(todayISO())
 
 const envelopeMap = computed(() =>
@@ -21,6 +25,52 @@ const envelopeMap = computed(() =>
 )
 
 const recentExpenses = computed(() => expenses.value.slice(0, 10))
+
+const placeSuggestions = computed(() => {
+  const query = place.value.trim().toLowerCase()
+  if (!query) return savedPlaces.value.slice(0, 8)
+  return savedPlaces.value.filter((p) => p.toLowerCase().includes(query)).slice(0, 8)
+})
+
+async function loadPlaces() {
+  try {
+    const { data } = await api.get('/api/expenses/places')
+    savedPlaces.value = data
+  } catch {
+    // Non-critical; typeahead just won't have history yet.
+  }
+}
+
+function onPlaceFocus() {
+  if (placeSuggestions.value.length) showPlaceSuggestions.value = true
+}
+
+function onPlaceBlur() {
+  setTimeout(() => {
+    showPlaceSuggestions.value = false
+  }, 150)
+}
+
+function selectPlace(suggestion) {
+  place.value = suggestion
+  showPlaceSuggestions.value = false
+}
+
+function rememberPlace(value) {
+  const trimmed = value.trim()
+  if (!trimmed) return
+  if (!savedPlaces.value.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
+    savedPlaces.value = [...savedPlaces.value, trimmed].sort((a, b) =>
+      a.localeCompare(b)
+    )
+  }
+}
+
+function onAmountInput(event) {
+  amountCents.value = centsFromDigitInput(event.target.value)
+  amountDisplay.value = formatDigitInputAsDollars(event.target.value)
+  event.target.value = amountDisplay.value
+}
 
 async function load() {
   loading.value = true
@@ -49,12 +99,16 @@ async function submit() {
   try {
     await api.post('/api/expenses', {
       envelope_id: envelopeId.value,
-      amount_cents: dollarsToCents(amount.value),
+      amount_cents: amountCents.value,
       description: description.value,
+      place: place.value.trim(),
       expense_date: expenseDate.value
     })
-    amount.value = ''
+    rememberPlace(place.value)
+    amountCents.value = 0
+    amountDisplay.value = ''
     description.value = ''
+    place.value = ''
     expenseDate.value = todayISO()
     success.value = 'Expense added'
     await load()
@@ -78,7 +132,10 @@ async function voidExpense(id) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadPlaces()
+})
 </script>
 
 <template>
@@ -96,14 +153,14 @@ onMounted(load)
             <span class="currency">$</span>
             <input
               id="amount"
-              v-model="amount"
+              :value="amountDisplay"
               class="amount-input"
-              type="number"
-              inputmode="decimal"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
               placeholder="0.00"
               required
+              @input="onAmountInput"
             />
           </div>
         </div>
@@ -129,12 +186,44 @@ onMounted(load)
           />
         </div>
 
+        <div class="form-group place-group">
+          <label for="place">Place</label>
+          <input
+            id="place"
+            v-model="place"
+            type="text"
+            placeholder="Where was this charge?"
+            autocomplete="off"
+            @focus="onPlaceFocus"
+            @blur="onPlaceBlur"
+            @input="showPlaceSuggestions = placeSuggestions.length > 0"
+          />
+          <ul
+            v-if="showPlaceSuggestions && placeSuggestions.length"
+            class="place-suggestions"
+            role="listbox"
+          >
+            <li
+              v-for="suggestion in placeSuggestions"
+              :key="suggestion"
+              role="option"
+              @mousedown.prevent="selectPlace(suggestion)"
+            >
+              {{ suggestion }}
+            </li>
+          </ul>
+        </div>
+
         <div class="form-group">
           <label for="date">Date</label>
           <input id="date" v-model="expenseDate" type="date" required />
         </div>
 
-        <button class="btn btn-block" type="submit" :disabled="!envelopes.length || submitting">
+        <button
+          class="btn btn-block"
+          type="submit"
+          :disabled="!envelopes.length || submitting || amountCents <= 0"
+        >
           {{ submitting ? 'Saving...' : 'Add expense' }}
         </button>
       </form>
@@ -162,6 +251,7 @@ onMounted(load)
             <p class="expense-meta">
               {{ envelopeMap[expense.envelope_id] || 'Unknown' }}
               · {{ expense.expense_date }}
+              <template v-if="expense.place"> · {{ expense.place }}</template>
             </p>
             <p v-if="expense.description" class="expense-desc">{{ expense.description }}</p>
           </div>
@@ -228,6 +318,36 @@ onMounted(load)
   margin: 1rem 0 0;
   color: #868e96;
   font-size: 0.9rem;
+}
+
+.place-group {
+  position: relative;
+}
+
+.place-suggestions {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.place-suggestions li {
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+}
+
+.place-suggestions li:hover {
+  background: #f1f3f5;
 }
 
 .success {

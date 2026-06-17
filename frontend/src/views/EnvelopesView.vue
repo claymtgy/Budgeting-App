@@ -83,7 +83,7 @@ onMounted(load)
             <input v-model="name" required />
           </div>
           <div class="form-group">
-            <label>Allocated amount (USD)</label>
+            <label>Monthly allocation (USD)</label>
             <input v-model="amount" type="number" inputmode="decimal" step="0.01" min="0" required />
           </div>
           <button class="btn btn-block" type="submit">{{ editingId ? 'Update' : 'Add' }}</button>
@@ -100,7 +100,9 @@ onMounted(load)
             <div class="row">
               <div>
                 <p class="title">{{ envelope.name }}</p>
-                <p class="subtitle">{{ formatCents(envelope.allocated_cents) }} allocated</p>
+                <p class="subtitle">
+                  {{ formatCents(envelope.allocated_cents) }}/mo · Balance {{ formatCents(envelope.balance_cents) }}
+                </p>
               </div>
               <div class="actions">
                 <button class="btn btn-sm btn-secondary" type="button" @click="startEdit(envelope)">Edit</button>
@@ -115,7 +117,8 @@ onMounted(load)
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Allocated</th>
+                <th>Monthly</th>
+                <th>Balance</th>
                 <th></th>
               </tr>
             </thead>
@@ -123,6 +126,7 @@ onMounted(load)
               <tr v-for="envelope in envelopes" :key="envelope.id">
                 <td>{{ envelope.name }}</td>
                 <td>{{ formatCents(envelope.allocated_cents) }}</td>
+                <td>{{ formatCents(envelope.balance_cents) }}</td>
                 <td>
                   <button class="btn btn-sm btn-secondary" type="button" @click="startEdit(envelope)">Edit</button>
                   <button class="btn btn-sm btn-danger" type="button" @click="remove(envelope.id)">Delete</button>

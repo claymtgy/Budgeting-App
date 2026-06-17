@@ -47,7 +47,8 @@ function availableClass(cents) {
             <div class="balance-info">
               <span class="balance-name">{{ envelope.name }}</span>
               <span class="balance-meta">
-                {{ formatCents(envelope.spent_cents) }} spent of {{ formatCents(envelope.allocated_cents) }}
+                {{ formatCents(envelope.spent_cents) }} spent this month of
+                {{ formatCents(envelope.allocated_cents) }}
               </span>
             </div>
             <div class="balance-remaining">
@@ -59,7 +60,7 @@ function availableClass(cents) {
       </section>
 
       <section v-if="summary.envelopes.length" class="chart-section card">
-        <h3 class="section-heading">Allocated vs spent</h3>
+        <h3 class="section-heading">This month: budget vs spent</h3>
         <EnvelopeBarChart :envelopes="summary.envelopes" />
       </section>
 
@@ -69,7 +70,7 @@ function availableClass(cents) {
           <p>{{ formatCents(summary.total_income_cents) }}</p>
         </div>
         <div class="summary-card">
-          <h3>Total Allocated</h3>
+          <h3>Monthly Allocated</h3>
           <p>{{ formatCents(summary.total_allocated_cents) }}</p>
         </div>
         <div class="summary-card">

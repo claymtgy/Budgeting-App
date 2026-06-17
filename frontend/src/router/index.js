@@ -24,7 +24,8 @@ const router = createRouter({
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
         { path: 'dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
         { path: 'incomes', name: 'incomes', component: () => import('@/views/IncomesView.vue') },
-        { path: 'envelopes', name: 'envelopes', component: () => import('@/views/EnvelopesView.vue') }
+        { path: 'envelopes', name: 'envelopes', component: () => import('@/views/EnvelopesView.vue') },
+        { path: 'transactions', name: 'transactions', component: () => import('@/views/TransactionsView.vue') }
       ]
     },
     { path: '/expenses', redirect: '/' }
