@@ -98,6 +98,8 @@ func main() {
 			r.Post("/expenses", expenseHandler.Create)
 			r.Put("/expenses/{id}/void", expenseHandler.Void)
 
+			r.Get("/summary/trends", summaryHandler.GetTrends)
+			r.Get("/summary/monthly", summaryHandler.GetMonthly)
 			r.Get("/summary", summaryHandler.Get)
 			})
 		})

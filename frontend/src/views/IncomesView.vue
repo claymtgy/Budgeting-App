@@ -76,6 +76,7 @@ onMounted(load)
 <template>
   <div>
     <h2 class="page-title">Incomes</h2>
+    <p class="hint">Recurring sources are recorded automatically each month on History and the dashboard chart.</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <div class="grid-2">
@@ -149,3 +150,11 @@ onMounted(load)
     </div>
   </div>
 </template>
+
+<style scoped>
+.hint {
+  margin: -0.5rem 0 1rem;
+  color: #868e96;
+  font-size: 0.9rem;
+}
+</style>

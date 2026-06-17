@@ -20,6 +20,20 @@ func currentMonthBounds(now time.Time) (start, end string) {
 	return startTime.Format("2006-01-02"), endTime.Format("2006-01-02")
 }
 
+func monthBoundsFromYYYYMM(month string) (start, end string, err error) {
+	t, err := time.Parse("2006-01", month)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid month: %w", err)
+	}
+	start = t.Format("2006-01-02")
+	end = t.AddDate(0, 1, 0).AddDate(0, 0, -1).Format("2006-01-02")
+	return start, end, nil
+}
+
+func currentMonthYYYYMM() string {
+	return time.Now().UTC().Format("2006-01")
+}
+
 func (r *Repository) EnsureMonthlyFunding(ctx context.Context, householdID uuid.UUID) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -54,7 +68,7 @@ func (r *Repository) ensureMonthlyFundingTx(ctx context.Context, tx pgx.Tx, hous
 		if err != nil {
 			return fmt.Errorf("init budget month: %w", err)
 		}
-		return nil
+		return r.ensureRecurringIncomeReceiptsForMonthTx(ctx, tx, householdID, currentMonth)
 	}
 
 	last := *lastFunded
@@ -70,6 +84,10 @@ func (r *Repository) ensureMonthlyFundingTx(ctx context.Context, tx pgx.Tx, hous
 			return fmt.Errorf("fund envelopes: %w", err)
 		}
 
+		if err := r.ensureRecurringIncomeReceiptsForMonthTx(ctx, tx, householdID, next); err != nil {
+			return err
+		}
+
 		_, err = tx.Exec(ctx,
 			`UPDATE households SET last_budget_month = $1 WHERE id = $2`,
 			next, householdID,
@@ -80,5 +98,5 @@ func (r *Repository) ensureMonthlyFundingTx(ctx context.Context, tx pgx.Tx, hous
 		last = next
 	}
 
-	return nil
+	return r.ensureRecurringIncomeReceiptsForMonthTx(ctx, tx, householdID, currentMonth)
 }

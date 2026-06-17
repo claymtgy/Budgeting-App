@@ -93,6 +93,11 @@ func (r *Repository) CreateIncome(ctx context.Context, householdID uuid.UUID, na
 	if err != nil {
 		return nil, fmt.Errorf("create income: %w", err)
 	}
+
+	if err := r.EnsureRecurringIncomeReceipts(ctx, householdID); err != nil {
+		return nil, fmt.Errorf("create income receipt: %w", err)
+	}
+
 	return &income, nil
 }
 
@@ -110,6 +115,19 @@ func (r *Repository) UpdateIncome(ctx context.Context, householdID, id uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("update income: %w", err)
 	}
+
+	monthlyAmount := monthlyIncomeAmount(income)
+	_, err = r.pool.Exec(ctx,
+		`UPDATE income_receipts
+		 SET amount_cents = $1, description = $2, updated_at = NOW()
+		 WHERE household_id = $3 AND income_id = $4 AND auto_generated AND NOT voided
+		   AND date_trunc('month', income_date) = date_trunc('month', CURRENT_DATE)`,
+		monthlyAmount, income.Name, householdID, income.ID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("update recurring income receipt: %w", err)
+	}
+
 	return &income, nil
 }
 
@@ -392,7 +410,7 @@ func (r *Repository) GetSummary(ctx context.Context, householdID uuid.UUID) (*mo
 	totalIncome := sum(incomeAmounts)
 	totalAllocated := sum(allocatedAmounts)
 
-	receiptTotal, err := r.totalIncomeReceiptCents(ctx, householdID)
+	receiptTotal, err := r.totalExtraIncomeReceiptCents(ctx, householdID)
 	if err != nil {
 		return nil, err
 	}

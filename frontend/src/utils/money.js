@@ -34,3 +34,30 @@ export function startOfMonthISO() {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   return `${date.getFullYear()}-${month}-01`
 }
+
+export function currentMonthValue() {
+  const date = new Date()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${date.getFullYear()}-${month}`
+}
+
+export function formatMonthLabel(monthValue) {
+  const [year, month] = monthValue.split('-').map(Number)
+  const date = new Date(year, month - 1, 1)
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+export function monthOptions(count = 24) {
+  const options = []
+  const date = new Date()
+  date.setDate(1)
+  for (let i = 0; i < count; i++) {
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    options.push({
+      value,
+      label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    })
+    date.setMonth(date.getMonth() - 1)
+  }
+  return options
+}
